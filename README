@@ -19,7 +19,14 @@ mine.
 
 on Mac
 
-   brew install openssl
-   brew install gmp
-   make rwtest
-   ./rwtest
+   	brew install openssl
+   	brew install gmp
+   	make rwtest
+   	./rwtest
+
+On linux
+
+	apt-get install libgmp-dev
+	apt-get install libssl-dev
+	make rwtest
+	./rwtest
