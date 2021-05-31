@@ -24,7 +24,7 @@ on Mac
    	make rwtest
    	./rwtest
 
-On linux
+on linux
 
 	apt-get install libgmp-dev
 	apt-get install libssl-dev
