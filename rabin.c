@@ -1,10 +1,8 @@
-#define SECRETKEYBYTES (64+64+128+1+8)
-#define PUBLICKEYBYTES 128
-#define BYTES 65                                \
 
 /* @<Preamble@>= */
 /* @<Standard includes@>= */
 
+#include <stdio.h>
 #include <stdint.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -13,6 +11,8 @@
 
 #include <gmp.h>
 #include <openssl/sha.h>
+
+#include "api.h"
 
 extern void randombytes(uint8_t*buffer, unsigned long long length);
 
@@ -30,15 +30,20 @@ init_random_prime(mpz_t n, unsigned size, unsigned mod8){
 
     mpz_init2(n, size);
 
+    int count = 0;
     for(;;){
+        count++;
         randombytes(buffer, bytes);
 
         buffer[bytes-1]&= ~7;
         buffer[bytes-1]|= mod8;
         mpz_import(n, bytes, 1, 1, 0, 0, buffer);
 
-        if(mpz_probab_prime_p(n, 32))
+        int ret = mpz_probab_prime_p(n, 48);
+        if(ret > 0) {
+            printf("prime test: %d\n", count);
             break;
+        }
     }
 }
 
@@ -152,12 +157,12 @@ crypto_sign_rwb0fuz1024_gmp_keypair(uint8_t*pk, uint8_t*sk){
 
     /* @<Pick primes@>= */
     for(;;){
-        init_random_prime(p, 512, 3);
-        init_random_prime(q, 512, 7);
+        init_random_prime(p, BASE*8, 3);
+        init_random_prime(q, BASE*8, 7);
         mpz_init(n);
         mpz_mul(n, p, q);
 
-        if(mpz_scan1(n, 1024-8)!=ULONG_MAX){
+        if(mpz_scan1(n, BASE*16-8)!=ULONG_MAX){
             gmp_printf("p: %Zd\n", p);
             gmp_printf("q: %Zd\n", q);
             gmp_printf("n: %Zd\n", n);
@@ -186,10 +191,10 @@ crypto_sign_rwb0fuz1024_gmp_keypair(uint8_t*pk, uint8_t*sk){
     /* @<Keypair serial...@>= */
     memset(sk, 0, SECRETKEYBYTES);
     mpz_export(sk, NULL, -1, 8, -1, 0, p);
-    mpz_export(sk+64, NULL, -1, 8, -1, 0, q);
-    mpz_export(sk+128, NULL, -1, 8, -1, 0, u);
-    sk[256]= mpz_sgn(u)<0?1:0;
-    memcpy(sk+257, hmac_secret, sizeof(hmac_secret));
+    mpz_export(sk+BASE, NULL, -1, 8, -1, 0, q);
+    mpz_export(sk+BASE*2, NULL, -1, 8, -1, 0, u);
+    sk[BASE*4]= mpz_sgn(u)<0?1:0;
+    memcpy(sk+BASE*4+1, hmac_secret, sizeof(hmac_secret));
 
     memset(pk, 0, PUBLICKEYBYTES);
     mpz_export(pk, NULL, -1, 8, -1, 0, n);
@@ -289,9 +294,9 @@ crypto_sign_rwb0fuz1024_gmp(uint8_t*sm, unsigned long long*smlen,
     mpz_init(v);
 
     mpz_import(p, 8, -1, 8, -1, 0, sk);
-    mpz_import(q, 8, -1, 8, -1, 0, sk+64);
-    mpz_import(u, 16, -1, 8, -1, 0, sk+128);
-    if(sk[256])
+    mpz_import(q, 8, -1, 8, -1, 0, sk+BASE);
+    mpz_import(u, 16, -1, 8, -1, 0, sk+BASE*2);
+    if(sk[BASE*4])
         mpz_neg(u, u);
 
     mpz_init(n);
@@ -416,9 +421,9 @@ crypto_sign_rwb0fuz1024_gmp_open(unsigned char*m, unsigned long long*mlen,
     mpz_t n, zsig;
 
     mpz_init(n);
-    mpz_import(n, 16, -1, 8, -1, 0, pk);
+    mpz_import(n, BASE/4, -1, 8, -1, 0, pk);
     mpz_init(zsig);
-    mpz_import(zsig, 64, -1, 1, 1, 0, sm);
+    mpz_import(zsig, BASE, -1, 1, 1, 0, sm);
     const uint8_t negate= sm[BYTES-1]&1;
     const uint8_t mul_2= sm[BYTES-1]&2;
     /*   @<Import values for verification@>@; */

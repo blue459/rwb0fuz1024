@@ -27,21 +27,19 @@ time_now() {
   return r;
 }
 
-#define N 64
-
 int
 main(int argc, char **argv) {
   fprintf(stderr, "Generating keypair...\n");
 
-  uint8_t pk[crypto_sign_rwb0fuz1024_gmp_PUBLICKEYBYTES];
-  uint8_t sk[crypto_sign_rwb0fuz1024_gmp_SECRETKEYBYTES];
+  uint8_t pk[PUBLICKEYBYTES];
+  uint8_t sk[SECRETKEYBYTES];
 
   crypto_sign_rwb0fuz1024_gmp_keypair(pk, sk);
 
-  uint8_t input[N];
-  uint8_t result[N];
-  uint8_t output[N + crypto_sign_rwb0fuz1024_gmp_BYTES];
-  memset(input, 42, N);
+  uint8_t input[BASE];
+  uint8_t result[BASE];
+  uint8_t output[BASE + BYTES];
+  memset(input, 42, BASE);
 
   fprintf(stderr, "Signing...\n");
 
